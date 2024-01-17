@@ -7,7 +7,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     lookup_field = 'username'
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == 'list' or self.action == 'create':
             return serializers.HyperlinkedUserSerializer
         else:
             return serializers.UserSerializer
