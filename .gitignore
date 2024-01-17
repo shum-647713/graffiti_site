@@ -1,3 +1,4 @@
 env/
 __pycache__/
 graffiti_site_api/db.sqlite3
+migrations/

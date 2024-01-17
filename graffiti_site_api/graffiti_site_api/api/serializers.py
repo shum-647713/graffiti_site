@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from graffiti_site_api.api.models import Graffiti
 
 
 class HyperlinkedUserSerializer(serializers.HyperlinkedModelSerializer):
@@ -17,6 +18,7 @@ class HyperlinkedUserSerializer(serializers.HyperlinkedModelSerializer):
         return user
 
 class UserSerializer(serializers.ModelSerializer):
+    graffiti = serializers.PrimaryKeyRelatedField(many=True, queryset=Graffiti.objects.all())
     class Meta:
         model = User
-        fields = ['username']
+        fields = ['username', 'graffiti']
