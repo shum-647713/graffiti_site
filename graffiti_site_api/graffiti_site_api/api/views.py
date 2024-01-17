@@ -1,13 +1,13 @@
 from graffiti_site_api.api import serializers
 from django.contrib.auth.models import User
-from rest_framework import viewsets
+from rest_framework import generics
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserListCreate(generics.ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = serializers.HyperlinkedUserSerializer
+
+class UserRetrieve(generics.RetrieveAPIView):
     queryset = User.objects.all()
     lookup_field = 'username'
-    def get_serializer_class(self):
-        if self.action == 'list' or self.action == 'create':
-            return serializers.HyperlinkedUserSerializer
-        else:
-            return serializers.UserSerializer
+    serializer_class = serializers.UserSerializer
