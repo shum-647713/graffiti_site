@@ -17,8 +17,22 @@ class HyperlinkedUserSerializer(serializers.HyperlinkedModelSerializer):
         user.save()
         return user
 
+class HyperlinkedGraffitiSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Graffiti
+        fields = ['url', 'name']
+        extra_kwargs = {
+            'url': {'read_only': True},
+        }
+
 class UserSerializer(serializers.ModelSerializer):
-    graffiti = serializers.PrimaryKeyRelatedField(many=True, queryset=Graffiti.objects.all())
+    graffiti = HyperlinkedGraffitiSerializer(many=True)
     class Meta:
         model = User
         fields = ['username', 'graffiti']
+
+class GraffitiSerializer(serializers.ModelSerializer):
+    owner = HyperlinkedUserSerializer()
+    class Meta:
+        model = Graffiti
+        fields = ['name', 'owner']
