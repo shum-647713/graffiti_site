@@ -22,3 +22,9 @@ class GraffitiListCreate(generics.ListCreateAPIView):
 class GraffitiRetrieve(generics.RetrieveAPIView):
     queryset = Graffiti.objects.all()
     serializer_class = serializers.GraffitiSerializer
+
+class UserAddGraffiti(generics.CreateAPIView):
+    serializer_class = serializers.HyperlinkedGraffitiSerializer
+    def perform_create(self, serializer):
+        owner = User.objects.get(username = self.kwargs['username'])
+        serializer.save(owner = owner)
