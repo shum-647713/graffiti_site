@@ -13,9 +13,11 @@ class UserRetrieve(generics.RetrieveAPIView):
     lookup_field = 'username'
     serializer_class = serializers.UserSerializer
 
-class GraffitiList(generics.ListAPIView):
+class GraffitiListCreate(generics.ListCreateAPIView):
     queryset = Graffiti.objects.all()
     serializer_class = serializers.HyperlinkedGraffitiSerializer
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 class GraffitiRetrieve(generics.RetrieveAPIView):
     queryset = Graffiti.objects.all()
