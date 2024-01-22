@@ -27,9 +27,10 @@ class HyperlinkedGraffitiSerializer(serializers.HyperlinkedModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     graffiti = HyperlinkedGraffitiSerializer(many=True)
+    add_graffiti = serializers.HyperlinkedIdentityField(view_name='user-graffiti', lookup_field='username', read_only=True)
     class Meta:
         model = User
-        fields = ['username', 'graffiti']
+        fields = ['username', 'graffiti', 'add_graffiti']
 
 class GraffitiSerializer(serializers.ModelSerializer):
     owner = HyperlinkedUserSerializer()
