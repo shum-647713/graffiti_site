@@ -1,6 +1,6 @@
 from graffiti_site_api.api import serializers
 from django.contrib.auth.models import User
-from .models import Graffiti
+from .models import Graffiti, Photo
 from .permissions import IsUserThemself
 from rest_framework import generics, permissions
 from rest_framework.decorators import api_view
@@ -34,6 +34,10 @@ class UserAddGraffiti(generics.CreateAPIView):
     def perform_create(self, serializer):
         owner = User.objects.get(username = self.kwargs['username'])
         serializer.save(owner = owner)
+
+class PhotoRetrieve(generics.RetrieveAPIView):
+    queryset = Photo.objects.all()
+    serializer_class = serializers.PhotoSerializer
 
 @api_view(['GET'])
 def api_root(request, format=None):

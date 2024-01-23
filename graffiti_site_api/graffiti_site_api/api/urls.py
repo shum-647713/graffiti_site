@@ -9,6 +9,7 @@ urlpatterns = [
     path('users/<username>/graffiti/', views.UserAddGraffiti.as_view(), name='user-graffiti'),
     path('graffiti/', views.GraffitiListCreate.as_view(), name='graffiti-list'),
     path('graffiti/<pk>/', views.GraffitiRetrieve.as_view(), name='graffiti-detail'),
+    path('photo/<pk>/', views.PhotoRetrieve.as_view(), name='photo-detail'),
     path('', views.api_root),
     path('auth/', views.api_auth, name='auth'),
 ]

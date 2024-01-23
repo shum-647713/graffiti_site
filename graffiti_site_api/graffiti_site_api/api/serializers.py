@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from graffiti_site_api.api.models import Graffiti
+from .models import Graffiti, Photo
 
 
 class HyperlinkedUserSerializer(serializers.HyperlinkedModelSerializer):
@@ -25,6 +25,11 @@ class HyperlinkedGraffitiSerializer(serializers.HyperlinkedModelSerializer):
             'url': {'read_only': True},
         }
 
+class HyperlinkedPhotoSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Photo
+        fields = ['url', 'image']
+
 class UserSerializer(serializers.ModelSerializer):
     graffiti = HyperlinkedGraffitiSerializer(many=True)
     add_graffiti = serializers.HyperlinkedIdentityField(view_name='user-graffiti', lookup_field='username', read_only=True)
@@ -33,7 +38,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['username', 'graffiti', 'add_graffiti']
 
 class GraffitiSerializer(serializers.ModelSerializer):
+    photos = HyperlinkedPhotoSerializer(many=True)
     owner = HyperlinkedUserSerializer()
     class Meta:
         model = Graffiti
-        fields = ['name', 'owner']
+        fields = ['name', 'photos', 'owner']
+
+class PhotoSerializer(serializers.ModelSerializer):
+    graffiti = HyperlinkedGraffitiSerializer()
+    class Meta:
+        model = Photo
+        fields = ['image', 'graffiti']
