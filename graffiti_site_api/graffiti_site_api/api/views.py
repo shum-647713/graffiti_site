@@ -6,6 +6,7 @@ from rest_framework import generics, permissions
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from django.http import HttpResponse
 
 
 class UserListCreate(generics.ListCreateAPIView):
@@ -16,6 +17,23 @@ class UserRetrieve(generics.RetrieveAPIView):
     queryset = User.objects.all()
     lookup_field = 'username'
     serializer_class = serializers.UserSerializer
+
+class UserChangeUsername(generics.UpdateAPIView):
+    permission_classes = [IsUserThemself]
+    queryset = User.objects.all()
+    lookup_field = 'username'
+    serializer_class = serializers.UserNewUsernameSerializer
+    def update(self, request, *args, **kwargs):
+        username = super().update(request, *args, **kwargs).data['username']
+        response = HttpResponse(content="", status=303)
+        response["Location"] = reverse('user-detail', request=request, args=[username])
+        return response
+
+class UserChangePassword(generics.UpdateAPIView):
+    permission_classes = [IsUserThemself]
+    queryset = User.objects.all()
+    lookup_field = 'username'
+    serializer_class = serializers.UserNewPasswordSerializer
 
 class GraffitiListCreate(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]

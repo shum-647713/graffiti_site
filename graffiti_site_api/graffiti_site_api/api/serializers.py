@@ -53,3 +53,19 @@ class PhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
         fields = ['image', 'graffiti']
+
+class UserNewUsernameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username']
+
+class UserNewPasswordSerializer(serializers.Serializer):
+    password = serializers.ModelField(model_field=User()._meta.get_field('password'), write_only=True)
+    old_password = serializers.CharField(max_length=128, write_only=True)
+    def validate_old_password(self, value):
+        if not self.instance.check_password(value):
+            raise serializers.ValidationError('Incorrect old_password')
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
