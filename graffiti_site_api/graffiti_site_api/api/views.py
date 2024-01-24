@@ -9,7 +9,7 @@ from rest_framework.reverse import reverse
 
 
 class UserListCreate(generics.ListCreateAPIView):
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('-pk')
     serializer_class = serializers.HyperlinkedUserSerializer
 
 class UserRetrieve(generics.RetrieveAPIView):
@@ -19,7 +19,7 @@ class UserRetrieve(generics.RetrieveAPIView):
 
 class GraffitiListCreate(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    queryset = Graffiti.objects.all()
+    queryset = Graffiti.objects.all().order_by('-pk')
     serializer_class = serializers.HyperlinkedGraffitiSerializer
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -36,7 +36,7 @@ class UserAddGraffiti(generics.CreateAPIView):
         serializer.save(owner = owner)
 
 class PhotoList(generics.ListAPIView):
-    queryset = Photo.objects.all()
+    queryset = Photo.objects.all().order_by('-pk')
     serializer_class = serializers.HyperlinkedPhotoSerializer
 
 class PhotoRetrieve(generics.RetrieveAPIView):
