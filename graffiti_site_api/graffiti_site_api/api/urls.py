@@ -1,5 +1,7 @@
 from django.urls import path, include
 from graffiti_site_api.api import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [
@@ -13,4 +15,4 @@ urlpatterns = [
     path('photo/<pk>/', views.PhotoRetrieve.as_view(), name='photo-detail'),
     path('', views.api_root),
     path('auth/', views.api_auth, name='auth'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
