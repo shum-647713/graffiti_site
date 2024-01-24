@@ -29,6 +29,9 @@ class HyperlinkedPhotoSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Photo
         fields = ['url', 'image']
+        extra_kwargs = {
+            'url': {'read_only': True},
+        }
 
 class UserSerializer(serializers.ModelSerializer):
     graffiti = HyperlinkedGraffitiSerializer(many=True)
@@ -38,11 +41,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['username', 'graffiti', 'add_graffiti']
 
 class GraffitiSerializer(serializers.ModelSerializer):
+    add_photo = serializers.HyperlinkedIdentityField(view_name='graffiti-photos', read_only=True)
     photos = HyperlinkedPhotoSerializer(many=True)
     owner = HyperlinkedUserSerializer()
     class Meta:
         model = Graffiti
-        fields = ['name', 'photos', 'owner']
+        fields = ['name', 'photos', 'owner', 'add_photo']
 
 class PhotoSerializer(serializers.ModelSerializer):
     graffiti = HyperlinkedGraffitiSerializer()
