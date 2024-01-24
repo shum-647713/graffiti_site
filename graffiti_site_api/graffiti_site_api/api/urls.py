@@ -12,7 +12,8 @@ urlpatterns = [
     path('graffiti/', views.GraffitiListCreate.as_view(), name='graffiti-list'),
     path('graffiti/<pk>/', views.GraffitiRetrieve.as_view(), name='graffiti-detail'),
     path('graffiti/<pk>/photos/', views.GraffitiAddPhoto.as_view(), name='graffiti-photos'),
-    path('photo/<pk>/', views.PhotoRetrieve.as_view(), name='photo-detail'),
+    path('photos/', views.PhotoList.as_view(), name='photo-list'),
+    path('photos/<pk>/', views.PhotoRetrieve.as_view(), name='photo-detail'),
     path('', views.api_root),
-    path('auth/', views.api_auth, name='auth'),
+    path('auth/', views.auth_list, name='auth-list'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -35,6 +35,10 @@ class UserAddGraffiti(generics.CreateAPIView):
         owner = User.objects.get(username = self.kwargs['username'])
         serializer.save(owner = owner)
 
+class PhotoList(generics.ListAPIView):
+    queryset = Photo.objects.all()
+    serializer_class = serializers.HyperlinkedPhotoSerializer
+
 class PhotoRetrieve(generics.RetrieveAPIView):
     queryset = Photo.objects.all()
     serializer_class = serializers.PhotoSerializer
@@ -49,13 +53,14 @@ class GraffitiAddPhoto(generics.CreateAPIView):
 @api_view(['GET'])
 def api_root(request, format=None):
     return Response({
-        'auth': reverse('auth', request=request, format=format),
+        'auth': reverse('auth-list', request=request, format=format),
         'users': reverse('user-list', request=request, format=format),
         'graffiti': reverse('graffiti-list', request=request, format=format),
+        'photos': reverse('photo-list', request=request, format=format),
     })
 
 @api_view(['GET'])
-def api_auth(request, format=None):
+def auth_list(request, format=None):
     return Response({
         'login': reverse('auth:login', request=request, format=format),
         'logout': reverse('auth:logout', request=request, format=format),
