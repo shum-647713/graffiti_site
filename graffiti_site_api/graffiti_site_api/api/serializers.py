@@ -35,10 +35,12 @@ class HyperlinkedPhotoSerializer(serializers.HyperlinkedModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     graffiti = HyperlinkedGraffitiSerializer(many=True)
+    change_username = serializers.HyperlinkedIdentityField(view_name='user-username', lookup_field='username', read_only=True)
+    change_password = serializers.HyperlinkedIdentityField(view_name='user-password', lookup_field='username', read_only=True)
     add_graffiti = serializers.HyperlinkedIdentityField(view_name='user-graffiti', lookup_field='username', read_only=True)
     class Meta:
         model = User
-        fields = ['username', 'graffiti', 'add_graffiti']
+        fields = ['username', 'graffiti', 'change_username', 'change_password', 'add_graffiti']
 
 class GraffitiSerializer(serializers.ModelSerializer):
     add_photo = serializers.HyperlinkedIdentityField(view_name='graffiti-photos', read_only=True)
