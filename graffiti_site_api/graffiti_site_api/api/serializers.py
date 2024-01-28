@@ -48,15 +48,15 @@ class UserUpdateSerializer(serializers.Serializer):
         return instance
 
 class GraffitiSerializer(serializers.ModelSerializer):
-    add_photo = serializers.HyperlinkedIdentityField(view_name='graffiti-photos', read_only=True)
-    photos = HyperlinkedPhotoSerializer(many=True)
-    owner = HyperlinkedUserSerializer()
+    add_photo = serializers.HyperlinkedIdentityField(view_name='graffiti-add-photo')
+    photos = HyperlinkedPhotoSerializer(many=True, read_only=True)
+    owner = HyperlinkedUserSerializer(read_only=True)
     class Meta:
         model = Graffiti
-        fields = ['name', 'photos', 'owner', 'add_photo']
+        fields = ['name', 'owner', 'photos', 'add_photo']
 
 class PhotoSerializer(serializers.ModelSerializer):
-    graffiti = HyperlinkedGraffitiSerializer()
+    graffiti = HyperlinkedGraffitiSerializer(read_only=True)
     class Meta:
         model = Photo
         fields = ['image', 'graffiti']

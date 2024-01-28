@@ -2,8 +2,9 @@ from . import serializers
 from django.contrib.auth.models import User
 from .models import Graffiti, Photo
 from .permissions import IsUserThemself, IsGraffitiOwner
-from rest_framework import generics, permissions, viewsets, status
+from rest_framework import generics, viewsets
 from rest_framework.decorators import api_view, action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from django.http import HttpResponse
@@ -21,13 +22,13 @@ class UserViewSet(viewsets.ModelViewSet):
             case 'update' | 'partial_update':
                 return serializers.UserUpdateSerializer
             case 'add_graffiti':
-                return serializers.HyperlinkedGraffitiSerializer
+                return serializers.GraffitiSerializer
     def get_permissions(self):
         match self.action:
-            case 'update' | 'partial_update' | 'destroy' | 'add_graffiti':
-                permission_classes = [IsUserThemself]
             case 'list' | 'create' | 'retrieve' | None:
                 permission_classes = []
+            case 'update' | 'partial_update' | 'destroy' | 'add_graffiti':
+                permission_classes = [IsUserThemself]
         return [permission() for permission in permission_classes]
     def update(self, request, *args, **kwargs):
         username = super().update(request, *args, **kwargs).data['username']
@@ -42,32 +43,42 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save(owner = user)
         return Response()
 
-
-class GraffitiListCreate(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+class GraffitiViewSet(viewsets.ModelViewSet):
     queryset = Graffiti.objects.all().order_by('-pk')
-    serializer_class = serializers.HyperlinkedGraffitiSerializer
+    def get_serializer_class(self):
+        match self.action:
+            case 'list':
+                return serializers.HyperlinkedGraffitiSerializer
+            case 'create' | 'retrieve' | 'update' | 'partial_update':
+                return serializers.GraffitiSerializer
+            case 'add_photo':
+                return serializers.PhotoSerializer
+    def get_permissions(self):
+        match self.action:
+            case 'list' | 'retrieve' | None:
+                permission_classes = []
+            case 'create':
+                permission_classes = [IsAuthenticated]
+            case 'update' | 'partial_update' | 'destroy' | 'add_photo':
+                permission_classes = [IsGraffitiOwner]
+        return [permission() for permission in permission_classes]
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-
-class GraffitiRetrieve(generics.RetrieveAPIView):
-    queryset = Graffiti.objects.all()
-    serializer_class = serializers.GraffitiSerializer
+        serializer.save(owner = self.request.user)
+    @action(detail=True, methods=['post'])
+    def add_photo(self, request, pk=None):
+        graffiti = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(graffiti = graffiti)
+        return Response()
 
 class PhotoList(generics.ListAPIView):
     queryset = Photo.objects.all().order_by('-pk')
     serializer_class = serializers.HyperlinkedPhotoSerializer
 
-class PhotoRetrieve(generics.RetrieveAPIView):
+class PhotoDetail(generics.RetrieveDestroyAPIView):
     queryset = Photo.objects.all()
     serializer_class = serializers.PhotoSerializer
-
-class GraffitiAddPhoto(generics.CreateAPIView):
-    permission_classes = [IsGraffitiOwner]
-    serializer_class = serializers.HyperlinkedPhotoSerializer
-    def perform_create(self, serializer):
-        graffiti = Graffiti.objects.get(pk = self.kwargs['pk'])
-        serializer.save(graffiti = graffiti)
 
 @api_view(['GET'])
 def api_root(request, format=None):
