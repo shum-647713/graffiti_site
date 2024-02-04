@@ -24,16 +24,22 @@ class UserSerializer(serializers.ModelSerializer):
     add_graffiti = serializers.HyperlinkedIdentityField(view_name='user-add-graffiti', lookup_field='username')
     class Meta:
         model = User
-        fields = ['username', 'password', 'graffiti', 'add_graffiti']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['username', 'email', 'password', 'graffiti', 'add_graffiti']
+        extra_kwargs = {
+            'email': {'write_only': True},
+            'password': {'write_only': True},
+        }
     def create(self, validated_data):
-        user = User(username = validated_data['username'])
+        user = User(username = validated_data['username'],
+                    email = validated_data['email'],
+                    is_active = False)
         user.set_password(validated_data['password'])
         user.save()
         return user
 
 class UserUpdateSerializer(serializers.Serializer):
     username = serializers.ModelField(model_field=User()._meta.get_field('username'))
+    email = serializers.ModelField(model_field=User()._meta.get_field('email'), write_only=True)
     password = serializers.ModelField(model_field=User()._meta.get_field('password'), write_only=True)
     old_password = serializers.ModelField(model_field=User()._meta.get_field('password'),
                                           required=True, write_only=True)
@@ -42,6 +48,7 @@ class UserUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError('Incorrect old_password')
     def update(self, instance, validated_data):
         instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
         if validated_data['password']:
             instance.set_password(validated_data['password'])
         instance.save()
