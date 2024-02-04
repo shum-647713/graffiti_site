@@ -1,12 +1,13 @@
 from . import serializers
 from django.contrib.auth.models import User
-from .models import Graffiti, Photo
+from .models import ActivationToken, Graffiti, Photo
 from .permissions import IsUserThemself, IsGraffitiOwner
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from secrets import token_urlsafe
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -36,6 +37,8 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
+        token_value = token_urlsafe(32)
+        ActivationToken.objects.create(value=token_value, user=instance)
         headers = {'Location': reverse('user-detail', request=request, args=[instance.username])}
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     

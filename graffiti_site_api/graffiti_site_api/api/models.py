@@ -1,6 +1,34 @@
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 import os, hashlib
 
+
+class TokenManager(models.Manager):
+    def __init__(self, token_lifespan, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.token_lifespan = token_lifespan
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        expiration_border = timezone.now() - self.token_lifespan
+        return queryset.filter(date_created__gt = expiration_border)
+    def delete_expired(self, delete_users=True):
+        queryset = super().get_queryset()
+        expiration_border = timezone.now() - self.token_lifespan
+        expired = queryset.filter(date_created__lt = expiration_border)
+        if delete_users:
+            for token in expired:
+                token.user.delete()
+        else:
+            expired.delete()
+
+class ActivationToken(models.Model):
+    value = models.CharField(max_length=64)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    date_created = models.DateTimeField(auto_now_add=True)
+    objects = TokenManager(token_lifespan=timedelta(days=2))
+    def __str__(self):
+        return self.user.username
 
 class Graffiti(models.Model):
     name = models.CharField(max_length=200)
