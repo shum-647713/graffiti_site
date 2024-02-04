@@ -1,5 +1,6 @@
 from . import serializers
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from .models import ActivationToken, Graffiti, Photo
 from .permissions import IsUserThemself, IsGraffitiOwner
 from rest_framework import generics, viewsets, status
@@ -7,6 +8,8 @@ from rest_framework.decorators import api_view, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from rest_framework.exceptions import ParseError
+from rest_framework.serializers import Serializer as EmptySerializer
 from secrets import token_urlsafe
 
 
@@ -22,12 +25,14 @@ class UserViewSet(viewsets.ModelViewSet):
                 return serializers.UserSerializer
             case 'update' | 'partial_update':
                 return serializers.UserUpdateSerializer
+            case 'activate':
+                return EmptySerializer
             case 'add_graffiti':
                 return serializers.GraffitiSerializer
     
     def get_permissions(self):
         match self.action:
-            case 'list' | 'create' | 'retrieve' | None:
+            case 'list' | 'create' | 'retrieve' | 'activate' | None:
                 permission_classes = []
             case 'update' | 'partial_update' | 'destroy' | 'add_graffiti':
                 permission_classes = [IsUserThemself]
@@ -41,6 +46,19 @@ class UserViewSet(viewsets.ModelViewSet):
         ActivationToken.objects.create(value=token_value, user=instance)
         headers = {'Location': reverse('user-detail', request=request, args=[instance.username])}
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    @action(detail=False, methods=['post'])
+    def activate(self, request):
+        token_value = request.query_params.get('token', None)
+        if token_value is None:
+            raise ParseError(detail=('Query parameter "token" is missing.'))
+        token = get_object_or_404(ActivationToken, value=token_value)
+        user = token.user
+        user.is_active = True
+        user.save()
+        token.delete()
+        headers = {'Location': reverse('user-detail', request=request, args=[user.username])}
+        return Response(headers=headers)
     
     def update(self, request, *args, **kwargs):
         data = super().update(request, *args, **kwargs).data
