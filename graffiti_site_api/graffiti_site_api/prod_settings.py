@@ -16,6 +16,14 @@ DEBUG = False
 ALLOWED_HOSTS = ['api.graffiti.com']
 
 
+EMAIL_USE_TLS = True
+EMAIL_HOST = os.environ["EMAIL_HOST"]
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
+DEFAULT_FROM_EMAIL = 'graffiti.com <noreply@graffiti.com>'
+
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

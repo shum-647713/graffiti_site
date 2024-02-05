@@ -1,4 +1,5 @@
 from . import serializers
+from .email import send_activation_link
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from .models import ActivationToken, Graffiti, Photo
@@ -42,8 +43,14 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
+        
         token_value = token_urlsafe(32)
         ActivationToken.objects.create(value=token_value, user=instance)
+        
+        link = reverse('user-activate', request=request)
+        link = f"{link}?token={token_value}"
+        send_activation_link(link, instance.email)
+        
         headers = {'Location': reverse('user-detail', request=request, args=[instance.username])}
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
