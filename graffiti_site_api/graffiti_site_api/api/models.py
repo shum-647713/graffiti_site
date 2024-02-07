@@ -16,11 +16,13 @@ class TokenManager(models.Manager):
         queryset = super().get_queryset()
         expiration_border = timezone.now() - self.token_lifespan
         expired = queryset.filter(date_created__lt = expiration_border)
+        n = expired.count()
         if delete_users:
             for token in expired:
                 token.user.delete()
         else:
             expired.delete()
+        return n
 
 class ActivationToken(models.Model):
     value = models.CharField(max_length=64)
