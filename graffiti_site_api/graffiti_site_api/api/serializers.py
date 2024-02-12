@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Graffiti, Photo
+import string
 
 
 class HyperlinkedUserSerializer(serializers.HyperlinkedModelSerializer):
@@ -43,9 +44,15 @@ class UserUpdateSerializer(serializers.Serializer):
     password = serializers.ModelField(model_field=User()._meta.get_field('password'), write_only=True)
     old_password = serializers.ModelField(model_field=User()._meta.get_field('password'),
                                           required=True, write_only=True)
+    def validate_username(self, value):
+        allowed = set(string.ascii_letters + string.digits + '@.+-_')
+        if not set(value) <= allowed:
+            raise serializers.ValidationError('Invalid username. This value may contain only letters, numbers, and @/./+/-/_ characters.')
+        return value
     def validate_old_password(self, value):
         if not self.instance.check_password(value):
             raise serializers.ValidationError('Incorrect old_password')
+        return value
     def update(self, instance, validated_data):
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
