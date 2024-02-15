@@ -1,5 +1,5 @@
 env/
 __pycache__/
-graffiti_site_api/db.sqlite3
-graffiti_site_api/images/
 migrations/
+db.sqlite3
+./images/
