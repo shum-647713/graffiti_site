@@ -6,13 +6,13 @@ RUN apt-get update && \
 
 WORKDIR /cron
 
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN python3 -m pip install -r requirements.txt
 
-COPY delete_expired_tokens.py ./
-RUN chmod 0744 ./delete_expired_tokens.py
+COPY delete_expired_tokens.py .
+RUN chmod 0744 delete_expired_tokens.py
 RUN echo "*/15 * * * * /cron/delete_expired_tokens.py" | crontab -
 
-COPY graffiti_site/ ./
+COPY graffiti_site/ graffiti_site/
 
 CMD ["cron", "-f"]

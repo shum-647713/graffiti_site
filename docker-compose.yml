@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=$POSTGRES_NAME
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+  cron:
+    build:
+      context: .
+      dockerfile: cron.Dockerfile
+    environment:
+      - SECRET_KEY=$SECRET_KEY
+      - POSTGRES_NAME=$POSTGRES_NAME
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - EMAIL_HOST=$EMAIL_HOST
+      - EMAIL_HOST_USER=$EMAIL_HOST_USER
+      - EMAIL_HOST_PASSWORD=$EMAIL_HOST_PASSWORD
+    depends_on:
+      - db
+  site:
+    build:
+      context: .
+      dockerfile: site.Dockerfile
+    ports:
+      - "80:8000"
+    environment:
+      - SECRET_KEY=$SECRET_KEY
+      - POSTGRES_NAME=$POSTGRES_NAME
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - EMAIL_HOST=$EMAIL_HOST
+      - EMAIL_HOST_USER=$EMAIL_HOST_USER
+      - EMAIL_HOST_PASSWORD=$EMAIL_HOST_PASSWORD
+    depends_on:
+      - db

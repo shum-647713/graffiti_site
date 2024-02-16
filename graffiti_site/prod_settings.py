@@ -8,14 +8,17 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ["SECRET_KEY"]
-DB_USERNAME = os.environ["DB_USERNAME"]
-DB_PASSWORD = os.environ["DB_PASSWORD"]
+
+POSTGRES_NAME = os.environ["POSTGRES_NAME"]
+POSTGRES_USER = os.environ["POSTGRES_USER"]
+POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 
 DEBUG = False
 
 ALLOWED_HOSTS = ['graffiti.com']
 
 
+ENABLE_EMAIL = True # for internal logic, not for the framework
 EMAIL_USE_TLS = True
 EMAIL_HOST = os.environ["EMAIL_HOST"]
 EMAIL_PORT = 587
@@ -69,10 +72,10 @@ WSGI_APPLICATION = 'graffiti_site.prod_wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'graffiti_site',
-        'USER': DB_USERNAME,
-        'PASSWORD': DB_PASSWORD,
-        'HOST': '127.0.0.1',
+        'NAME': POSTGRES_NAME,
+        'USER': POSTGRES_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': 'db',
         'PORT': '5432'
     }
 }
