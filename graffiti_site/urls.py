@@ -1,5 +1,5 @@
 """
-URL configuration for graffiti_site_api project.
+URL configuration for graffiti_site project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
@@ -19,5 +19,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('graffiti_site_api.api.urls')),
+    path('api/', include('graffiti_site.api.urls')),
 ]

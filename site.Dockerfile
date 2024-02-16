@@ -1,11 +1,11 @@
 FROM python:3.12-alpine
 
-WORKDIR /graffiti_site_api
+WORKDIR /site
 
 COPY requirements.txt ./
 RUN python -m pip install -r requirements.txt
 
-COPY graffiti_site_api/ ./
+COPY graffiti_site/ ./
 
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "graffiti_site_api.prod_wsgi"]
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "graffiti_site.prod_wsgi"]
 EXPOSE 8000

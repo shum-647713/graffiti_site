@@ -1,5 +1,5 @@
 """
-Django settings for graffiti_site_api project.
+Django settings for graffiti_site project.
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ DB_PASSWORD = os.environ["DB_PASSWORD"]
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['api.graffiti.com']
+ALLOWED_HOSTS = ['graffiti.com']
 
 
 EMAIL_USE_TLS = True
@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'graffiti_site_api.api',
+    'graffiti_site.api',
 ]
 
 MIDDLEWARE = [
@@ -45,7 +45,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'graffiti_site_api.urls'
+ROOT_URLCONF = 'graffiti_site.urls'
 
 TEMPLATES = [
     {
@@ -63,7 +63,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'graffiti_site_api.prod_wsgi.application'
+WSGI_APPLICATION = 'graffiti_site.prod_wsgi.application'
 
 
 DATABASES = {
