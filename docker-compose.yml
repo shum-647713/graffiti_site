@@ -2,7 +2,7 @@ services:
   db:
     image: postgres
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_DB=$POSTGRES_NAME
       - POSTGRES_USER=$POSTGRES_USER
@@ -19,6 +19,9 @@ services:
     build:
       context: .
       dockerfile: site.Dockerfile
+    volumes:
+      - static_files:/site/static/
+      - media_files:/site/media/
     expose:
       - 8000
     env_file:
@@ -29,7 +32,15 @@ services:
     build:
       context: .
       dockerfile: nginx.Dockerfile
+    volumes:
+      - static_files:/var/www/static/
+      - media_files:/var/www/media/
     ports:
       - 80:80
     depends_on:
       - site
+
+volumes:
+  postgres_data:
+  static_files:
+  media_files:
