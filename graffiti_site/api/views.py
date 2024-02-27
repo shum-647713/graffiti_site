@@ -12,6 +12,7 @@ from rest_framework.reverse import reverse
 from rest_framework.exceptions import ParseError
 from rest_framework.serializers import Serializer as EmptySerializer
 from secrets import token_urlsafe
+from django.conf import settings
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -42,14 +43,15 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
+        instance = serializer.save(is_active = not settings.ENABLE_EMAIL)
         
-        token_value = token_urlsafe(32)
-        ActivationToken.objects.create(value=token_value, user=instance)
-        
-        link = reverse('user-activate', request=request)
-        link = f"{link}?token={token_value}"
-        send_activation_link(link, instance.email)
+        if settings.ENABLE_EMAIL:
+            token_value = token_urlsafe(32)
+            ActivationToken.objects.create(value=token_value, user=instance)
+            
+            link = reverse('user-activate', request=request)
+            link = f"{link}?token={token_value}"
+            send_activation_link(link, instance.email)
         
         headers = {'Location': reverse('user-detail', request=request, args=[instance.username])}
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
