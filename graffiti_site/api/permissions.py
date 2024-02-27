@@ -8,6 +8,7 @@ class IsUserThemself(permissions.BasePermission):
         accessed_user = User.objects.get(username = view.kwargs['username'])
         return request.user == accessed_user
 
+
 class IsGraffitiOwner(permissions.BasePermission):
     def has_permission(self, request, view):
         accessed_graffiti = Graffiti.objects.get(pk = view.kwargs['pk'])

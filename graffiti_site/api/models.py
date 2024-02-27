@@ -1,7 +1,8 @@
-from django.db import models
-from django.utils import timezone
+import os
+import hashlib
 from datetime import timedelta
-import os, hashlib
+from django.utils import timezone
+from django.db import models
 
 
 class TokenManager(models.Manager):

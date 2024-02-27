@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'no-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True if SECRET_KEY == 'no-secret-key' else False
+DEBUG = SECRET_KEY == 'no-secret-key'
 
 # 'ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
@@ -38,14 +38,11 @@ else:
     DB_ENGINE = 'django.db.backends.postgresql'
 
 
-if os.environ.get('ENABLE_EMAIL', '').lower() in ['1', 'true']:
-    ENABLE_EMAIL = True
-else:
-    ENABLE_EMAIL = False
+ENABLE_EMAIL = os.environ.get('ENABLE_EMAIL', '').lower() in ['1', 'true']
 
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '127.0.0.1')
-EMAIL_USE_TLS = False if EMAIL_HOST == '127.0.0.1' else True
-EMAIL_PORT = 25 if EMAIL_HOST == '127.0.0.1' else 587
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_USE_TLS = EMAIL_HOST != 'localhost'
+EMAIL_PORT = 25 if EMAIL_HOST == 'localhost' else 587
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'graffiti.com <noreply@graffiti.com>')

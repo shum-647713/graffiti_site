@@ -1,18 +1,18 @@
-from . import serializers
-from .email import send_activation_link
-from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404
-from .models import ActivationToken, Graffiti, Photo
-from .permissions import IsUserThemself, IsGraffitiOwner
-from rest_framework import generics, viewsets, status
-from rest_framework.decorators import api_view, action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
-from rest_framework.exceptions import ParseError
-from rest_framework.serializers import Serializer as EmptySerializer
 from secrets import token_urlsafe
+from rest_framework.serializers import Serializer as EmptySerializer
+from rest_framework.reverse import reverse
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ParseError
+from rest_framework.decorators import api_view, action
+from rest_framework import generics, viewsets, status
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
 from django.conf import settings
+from .permissions import IsUserThemself, IsGraffitiOwner
+from .models import ActivationToken, Graffiti, Photo
+from .email import send_activation_link
+from . import serializers
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -60,7 +60,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def activate(self, request):
         token_value = request.query_params.get('token', None)
         if token_value is None:
-            raise ParseError(detail=('Query parameter "token" is missing.'))
+            raise ParseError(detail='Query parameter "token" is missing.')
         token = get_object_or_404(ActivationToken, value=token_value)
         user = token.user
         user.is_active = True
