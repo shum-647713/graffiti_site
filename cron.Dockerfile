@@ -6,8 +6,8 @@ RUN apt-get update && \
 
 WORKDIR /cron
 
-COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
+COPY requirements.cron.txt .
+RUN python3 -m pip install -r requirements.cron.txt
 
 COPY delete_expired_tokens.py .
 RUN chmod 0744 delete_expired_tokens.py

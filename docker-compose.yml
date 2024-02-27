@@ -11,8 +11,8 @@ services:
     build:
       context: .
       dockerfile: cron.Dockerfile
-    env_file:
-      - .env
+    volumes:
+      - ./.env:/cron/.env:ro
     depends_on:
       - db
   site:
