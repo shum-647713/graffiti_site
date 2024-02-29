@@ -3,7 +3,7 @@ from rest_framework.reverse import reverse
 from rest_framework import test
 from django.urls import resolve
 from django.contrib.auth.models import User
-from .models import ActivationToken, Graffiti
+from ..models import ActivationToken, Graffiti
 
 
 class UserViewAPITestCase(test.APITestCase):
