@@ -1,7 +1,9 @@
+from secrets import token_urlsafe
 from rest_framework.reverse import reverse
 from rest_framework import test
 from django.urls import resolve
 from django.contrib.auth.models import User
+from .models import ActivationToken, Graffiti
 
 
 class UserViewAPITestCase(test.APITestCase):
@@ -109,3 +111,128 @@ class UserViewAPITestCase(test.APITestCase):
         __, response = self.update_user(method='patch', data=data)
         
         self.assertContains(response, text='Invalid username', status_code=400)
+    
+    def test_activate_user(self):
+        user = User.objects.create(username='user', is_active=False)
+        token_value = token_urlsafe(32)
+        token = ActivationToken.objects.create(value=token_value, user=user)
+        
+        url = reverse('user-activate')
+        request = self.factory.get(url, {'token': token_value})
+        request.method = 'post'
+        response = resolve(url).func(request)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Location'],
+                         reverse('user-detail', request=request, args=[user.username]))
+        del user.is_active
+        self.assertEqual(user.is_active, True)
+        self.assertEqual(ActivationToken.objects.filter(pk=token.pk).count(), 0)
+    
+    def test_user_add_graffiti(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-add-graffiti', args=[user.username])
+        data = {'name': 'user\'s graffiti'}
+        request = self.factory.post(url, data)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Graffiti.objects.filter(owner=user).count(), 1)
+        graffiti = Graffiti.objects.get(owner=user)
+        self.assertEqual(response['Location'],
+                         reverse('graffiti-detail', request=request, args=[graffiti.pk]))
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['owner']['url'],
+                         reverse('user-detail', request=request, args=[user.username]))
+        self.assertEqual(response.data['owner']['username'], user.username)
+        self.assertEqual(response.data['photos'], [])
+        self.assertEqual(response.data['add_photo'],
+                         reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+
+
+class GraffitiViewAPITestCase(test.APITestCase):
+    def setUp(self):
+        self.factory = test.APIRequestFactory()
+    
+    def test_list_graffiti(self):
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-list')
+        request = self.factory.get(url)
+        response = resolve(url).func(request)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['url'],
+                         reverse('graffiti-detail', request=request, args=[graffiti.pk]))
+        self.assertEqual(response.data['results'][0]['name'], graffiti.name)
+    
+    def test_create_graffiti(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('graffiti-list')
+        data = {'name': 'user\'s graffiti'}
+        request = self.factory.post(url, data)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request)
+        
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Graffiti.objects.filter(owner=user).count(), 1)
+        graffiti = Graffiti.objects.get(owner=user)
+        self.assertEqual(response['Location'],
+                         reverse('graffiti-detail', request=request, args=[graffiti.pk]))
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['owner']['url'],
+                         reverse('user-detail', request=request, args=[user.username]))
+        self.assertEqual(response.data['owner']['username'], user.username)
+        self.assertEqual(response.data['photos'], [])
+        self.assertEqual(response.data['add_photo'],
+                         reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+    
+    def test_retrieve_graffiti(self):
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-detail', args=[graffiti.pk])
+        request = self.factory.get(url)
+        response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['name'], graffiti.name)
+        self.assertEqual(response.data['owner']['url'],
+                         reverse('user-detail', request=request, args=[user.username]))
+        self.assertEqual(response.data['owner']['username'], user.username)
+        self.assertEqual(response.data['photos'], [])
+        self.assertEqual(response.data['add_photo'],
+                         reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+    
+    def update_graffiti(self, partial):
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-detail', args=[graffiti.pk])
+        data = {'name': 'new name for user\'s graffiti'}
+        request = (self.factory.patch if partial else self.factory.put)(url, data)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['owner']['url'],
+                         reverse('user-detail', request=request, args=[user.username]))
+        self.assertEqual(response.data['owner']['username'], user.username)
+        self.assertEqual(response.data['photos'], [])
+        self.assertEqual(response.data['add_photo'],
+                         reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+    
+    def test_update_graffiti(self):
+        self.update_graffiti(partial=False)
+    
+    def test_partially_update_graffiti(self):
+        self.update_graffiti(partial=True)
