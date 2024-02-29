@@ -1,9 +1,10 @@
 from secrets import token_urlsafe
+from pathlib import Path
 from rest_framework.reverse import reverse
 from rest_framework import test
 from django.urls import resolve
 from django.contrib.auth.models import User
-from ..models import ActivationToken, Graffiti
+from ..models import ActivationToken, Graffiti, Photo
 
 
 class UserViewAPITestCase(test.APITestCase):
@@ -63,9 +64,7 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(response.data['add_graffiti'],
                          reverse('user-add-graffiti', request=request, args=[user.username]))
     
-    def update_user(self, method, data):
-        assert method in ['put', 'patch']
-        
+    def update_user(self, data, partial):
         user = User.objects.create(username='user', email='user@example.com')
         user_password = 'kW305U},jp2^'
         user.set_password(user_password)
@@ -73,10 +72,7 @@ class UserViewAPITestCase(test.APITestCase):
         
         url = reverse('user-detail', args=[user.username])
         data['old_password'] = user_password
-        if method == 'put':
-            request = self.factory.put(url, data)
-        else:
-            request = self.factory.patch(url, data)
+        request = (self.factory.patch if partial else self.factory.put)(url, data)
         test.force_authenticate(request, user)
         response = resolve(url).func(request, username=user.username)
         return request, response
@@ -87,7 +83,7 @@ class UserViewAPITestCase(test.APITestCase):
             'email': 'user_name@example.com',
             'password': 'gK0RU14`S|Ix',
         }
-        request, response = self.update_user(method='put', data=data)
+        request, response = self.update_user(data=data, partial=False)
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Location'],
@@ -100,7 +96,7 @@ class UserViewAPITestCase(test.APITestCase):
             'email': 'name_user@u.com',
             'password': '4G0>6db&qI[t',
         }
-        __, response = self.update_user(method='put', data=data)
+        __, response = self.update_user(data=data, partial=False)
         
         self.assertContains(response, text='Invalid username', status_code=400)
     
@@ -108,7 +104,7 @@ class UserViewAPITestCase(test.APITestCase):
         data = {
             'username': 'user/name',
         }
-        __, response = self.update_user(method='patch', data=data)
+        __, response = self.update_user(data=data, partial=True)
         
         self.assertContains(response, text='Invalid username', status_code=400)
     
@@ -236,3 +232,30 @@ class GraffitiViewAPITestCase(test.APITestCase):
     
     def test_partially_update_graffiti(self):
         self.update_graffiti(partial=True)
+    
+    def test_graffiti_add_photo(self):
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        image_ext = '.jpg'
+        image_path = Path(__file__).resolve().parent / ('Graffiti-Style-Lettering' + image_ext)
+        image_sha256hash = '0bfacc09f2fb9105c77988a230f30dc29897c5941a89c038b57c85407782b75f'
+        testserver_images_url = 'http://testserver/media/images/'
+        
+        with open(image_path, "rb") as image_file:
+            url = reverse('graffiti-add-photo', args=[graffiti.pk])
+            data = {'image': image_file}
+            request = self.factory.post(url, data)
+            test.force_authenticate(request, user)
+            response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Photo.objects.filter(graffiti=graffiti).count(), 1)
+        photo = Photo.objects.get(graffiti=graffiti)
+        self.assertEqual(response['Location'],
+                         reverse('photo-detail', request=request, args=[photo.pk]))
+        self.assertTrue(response.data['image'].startswith(testserver_images_url + image_sha256hash))
+        self.assertTrue(response.data['image'].endswith(image_ext))
+        self.assertEqual(response.data['graffiti']['url'],
+                         reverse('graffiti-detail', request=request, args=[graffiti.pk]))
+        self.assertEqual(response.data['graffiti']['name'], graffiti.name)
