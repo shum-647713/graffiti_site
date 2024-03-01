@@ -2,14 +2,14 @@ from secrets import token_urlsafe
 from rest_framework.serializers import Serializer as EmptySerializer
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework.exceptions import ParseError
 from rest_framework.decorators import api_view, action
 from rest_framework import generics, viewsets, status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from django.conf import settings
-from .permissions import IsUserThemself, IsGraffitiOwner
+from .permissions import IsUserThemself, IsGraffitiOwner, IsPhotoOwner
 from .models import ActivationToken, Graffiti, Photo
 from .email import send_activation_link
 from . import serializers
@@ -131,6 +131,13 @@ class PhotoList(generics.ListAPIView):
 class PhotoDetail(generics.RetrieveDestroyAPIView):
     queryset = Photo.objects.all()
     serializer_class = serializers.PhotoSerializer
+    
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            permission_classes = []
+        else:
+            permission_classes = [IsPhotoOwner]
+        return [permission() for permission in permission_classes]
 
 
 @api_view(['GET'])

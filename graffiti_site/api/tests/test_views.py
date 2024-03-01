@@ -115,6 +115,75 @@ class UserViewAPITestCase(test.APITestCase):
         
         self.assertContains(response, text='Invalid username', status_code=400)
     
+    def test_update_user_no_auth(self):
+        user = User.objects.create(username='user', email='user@example.com')
+        user_password = 'kW305U},jp2^'
+        user.set_password(user_password)
+        user.save()
+        
+        url = reverse('user-detail', args=[user.username])
+        data = {
+            'username': 'user_name',
+            'email': 'user_name@example.com',
+            'password': 'gK0RU14`S|Ix',
+            'old_password': user_password,
+        }
+        request = self.factory.put(url, data)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertContains(response, text='Authentication credentials were not provided', status_code=403)
+        user.refresh_from_db()
+        self.assertEqual(user.username, 'user')
+        self.assertEqual(user.email, 'user@example.com')
+        self.assertTrue(user.check_password(user_password))
+    
+    def test_update_user_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user', email='user@example.com')
+        user_password = 'kW305U},jp2^'
+        user.set_password(user_password)
+        user.save()
+        
+        url = reverse('user-detail', args=[user.username])
+        data = {
+            'username': 'user_name',
+            'email': 'user_name@example.com',
+            'password': 'gK0RU14`S|Ix',
+            'old_password': user_password,
+        }
+        request = self.factory.put(url, data)
+        test.force_authenticate(request, wrong_user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        user.refresh_from_db()
+        self.assertEqual(user.username, 'user')
+        self.assertEqual(user.email, 'user@example.com')
+        self.assertTrue(user.check_password(user_password))
+    
+    def test_update_user_incorrect_old_password(self):
+        user = User.objects.create(username='user', email='user@example.com')
+        user_password = 'kW305U},jp2^'
+        user.set_password(user_password)
+        user.save()
+        
+        url = reverse('user-detail', args=[user.username])
+        data = {
+            'username': 'user_name',
+            'email': 'user_name@example.com',
+            'password': 'gK0RU14`S|Ix',
+            'old_password': 'invalid',
+        }
+        request = self.factory.put(url, data)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertContains(response, text='Incorrect old_password', status_code=400)
+        user.refresh_from_db()
+        self.assertEqual(user.username, 'user')
+        self.assertEqual(user.email, 'user@example.com')
+        self.assertTrue(user.check_password(user_password))
+    
     def test_destroy_user(self):
         user = User.objects.create(username='user')
         
@@ -125,6 +194,18 @@ class UserViewAPITestCase(test.APITestCase):
         
         self.assertEqual(response.status_code, 204)
         self.assertEqual(User.objects.count(), 0)
+    
+    def test_destroy_user_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-detail', args=[user.username])
+        request = self.factory.delete(url)
+        test.force_authenticate(request, wrong_user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        self.assertEqual(User.objects.filter(username=user.username).count(), 1)
     
     def test_activate_user(self):
         user = User.objects.create(username='user', is_active=False)
@@ -164,6 +245,19 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(response.data['photos'], [])
         self.assertEqual(response.data['add_photo'],
                          reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+    
+    def test_user_add_graffiti_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-add-graffiti', args=[user.username])
+        data = {'name': 'user\'s graffiti'}
+        request = self.factory.post(url, data)
+        test.force_authenticate(request, wrong_user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        self.assertEqual(Graffiti.objects.count(), 0)
 
 
 class GraffitiViewAPITestCase(test.APITestCase):
@@ -206,6 +300,17 @@ class GraffitiViewAPITestCase(test.APITestCase):
         self.assertEqual(response.data['photos'], [])
         self.assertEqual(response.data['add_photo'],
                          reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
+    
+    def test_create_graffiti_no_auth(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('graffiti-list')
+        data = {'name': 'user\'s graffiti'}
+        request = self.factory.post(url, data)
+        response = resolve(url).func(request)
+        
+        self.assertContains(response, text='Authentication credentials were not provided', status_code=403)
+        self.assertEqual(Graffiti.objects.count(), 0)
     
     def test_retrieve_graffiti(self):
         user = User.objects.create(username='user')
@@ -251,6 +356,22 @@ class GraffitiViewAPITestCase(test.APITestCase):
     def test_partially_update_graffiti(self):
         self.update_graffiti(partial=True)
     
+    def test_update_graffiti_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-detail', args=[graffiti.pk])
+        data = {'name': 'new name for user\'s graffiti'}
+        request = self.factory.put(url, data)
+        test.force_authenticate(request, wrong_user)
+        response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        graffiti.refresh_from_db()
+        self.assertEqual(graffiti.name, 'user\'s graffiti')
+    
     def test_destroy_graffiti(self):
         user = User.objects.create(username='user')
         graffiti = Graffiti.objects.create(name='user\'s graffiti',
@@ -263,6 +384,20 @@ class GraffitiViewAPITestCase(test.APITestCase):
         
         self.assertEqual(response.status_code, 204)
         self.assertEqual(Graffiti.objects.count(), 0)
+    
+    def test_destroy_graffiti_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-detail', args=[graffiti.pk])
+        request = self.factory.delete(url)
+        test.force_authenticate(request, wrong_user)
+        response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        self.assertEqual(Graffiti.objects.count(), 1)
     
     def test_graffiti_add_photo(self):
         user = User.objects.create(username='user')
@@ -286,6 +421,22 @@ class GraffitiViewAPITestCase(test.APITestCase):
         self.assertEqual(response.data['graffiti']['url'],
                          reverse('graffiti-detail', request=request, args=[graffiti.pk]))
         self.assertEqual(response.data['graffiti']['name'], graffiti.name)
+    
+    def test_graffiti_add_photo_forbidden(self):
+        wrong_user = User.objects.create(username='wrong_user')
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
+            url = reverse('graffiti-add-photo', args=[graffiti.pk])
+            data = {'image': image_file}
+            request = self.factory.post(url, data)
+            test.force_authenticate(request, wrong_user)
+            response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+        self.assertEqual(Photo.objects.count(), 0)
 
 
 class PhotoViewAPITestCase(test.APITestCase):
@@ -345,3 +496,20 @@ class PhotoViewAPITestCase(test.APITestCase):
             
             self.assertEqual(response.status_code, 204)
             self.assertEqual(Photo.objects.count(), 0)
+    
+    def test_destroy_photo_forbidden(self):
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
+            wrong_user = User.objects.create(username='wrong_user')
+            user = User.objects.create(username='user')
+            graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                               owner=user)
+            photo = Photo.objects.create(image=File(image_file),
+                                         graffiti=graffiti)
+            
+            url = reverse('photo-detail', args=[photo.pk])
+            request = self.factory.delete(url)
+            test.force_authenticate(request, wrong_user)
+            response = resolve(url).func(request, pk=photo.pk)
+            
+            self.assertContains(response, text='You do not have permission to perform this action', status_code=403)
+            self.assertEqual(Photo.objects.count(), 1)
