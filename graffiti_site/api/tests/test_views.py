@@ -3,8 +3,15 @@ from pathlib import Path
 from rest_framework.reverse import reverse
 from rest_framework import test
 from django.urls import resolve
+from django.core.files import File
 from django.contrib.auth.models import User
 from ..models import ActivationToken, Graffiti, Photo
+
+
+SAMPLE_IMAGE_EXT = '.jpg'
+SAMPLE_IMAGE_PATH = Path(__file__).resolve().parent / ('Graffiti-Style-Lettering' + SAMPLE_IMAGE_EXT)
+SAMPLE_IMAGE_SHA256_HASH = '0bfacc09f2fb9105c77988a230f30dc29897c5941a89c038b57c85407782b75f'
+TESTSERVER_IMAGES_URL = 'http://testserver/media/images/'
 
 
 class UserViewAPITestCase(test.APITestCase):
@@ -107,6 +114,17 @@ class UserViewAPITestCase(test.APITestCase):
         __, response = self.update_user(data=data, partial=True)
         
         self.assertContains(response, text='Invalid username', status_code=400)
+    
+    def test_destroy_user(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-detail', args=[user.username])
+        request = self.factory.delete(url)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(User.objects.count(), 0)
     
     def test_activate_user(self):
         user = User.objects.create(username='user', is_active=False)
@@ -233,16 +251,25 @@ class GraffitiViewAPITestCase(test.APITestCase):
     def test_partially_update_graffiti(self):
         self.update_graffiti(partial=True)
     
+    def test_destroy_graffiti(self):
+        user = User.objects.create(username='user')
+        graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                           owner=user)
+        
+        url = reverse('graffiti-detail', args=[graffiti.pk])
+        request = self.factory.delete(url)
+        test.force_authenticate(request, user)
+        response = resolve(url).func(request, pk=graffiti.pk)
+        
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(Graffiti.objects.count(), 0)
+    
     def test_graffiti_add_photo(self):
         user = User.objects.create(username='user')
         graffiti = Graffiti.objects.create(name='user\'s graffiti',
                                            owner=user)
-        image_ext = '.jpg'
-        image_path = Path(__file__).resolve().parent / ('Graffiti-Style-Lettering' + image_ext)
-        image_sha256hash = '0bfacc09f2fb9105c77988a230f30dc29897c5941a89c038b57c85407782b75f'
-        testserver_images_url = 'http://testserver/media/images/'
         
-        with open(image_path, "rb") as image_file:
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
             url = reverse('graffiti-add-photo', args=[graffiti.pk])
             data = {'image': image_file}
             request = self.factory.post(url, data)
@@ -254,8 +281,67 @@ class GraffitiViewAPITestCase(test.APITestCase):
         photo = Photo.objects.get(graffiti=graffiti)
         self.assertEqual(response['Location'],
                          reverse('photo-detail', request=request, args=[photo.pk]))
-        self.assertTrue(response.data['image'].startswith(testserver_images_url + image_sha256hash))
-        self.assertTrue(response.data['image'].endswith(image_ext))
+        self.assertTrue(response.data['image'].startswith(TESTSERVER_IMAGES_URL + SAMPLE_IMAGE_SHA256_HASH))
+        self.assertTrue(response.data['image'].endswith(SAMPLE_IMAGE_EXT))
         self.assertEqual(response.data['graffiti']['url'],
                          reverse('graffiti-detail', request=request, args=[graffiti.pk]))
         self.assertEqual(response.data['graffiti']['name'], graffiti.name)
+
+
+class PhotoViewAPITestCase(test.APITestCase):
+    def setUp(self):
+        self.factory = test.APIRequestFactory()
+    
+    def test_list_photo(self):
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
+            user = User.objects.create(username='user')
+            graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                               owner=user)
+            photo = Photo.objects.create(image=File(image_file),
+                                         graffiti=graffiti)
+            
+            url = reverse('photo-list')
+            request = self.factory.get(url)
+            response = resolve(url).func(request)
+            
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data['count'], 1)
+            self.assertEqual(response.data['results'][0]['url'],
+                             reverse('photo-detail', request=request, args=[photo.pk]))
+            self.assertTrue(response.data['results'][0]['image'].startswith(TESTSERVER_IMAGES_URL + SAMPLE_IMAGE_SHA256_HASH))
+            self.assertTrue(response.data['results'][0]['image'].endswith(SAMPLE_IMAGE_EXT))
+    
+    def test_retrieve_photo(self):
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
+            user = User.objects.create(username='user')
+            graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                               owner=user)
+            photo = Photo.objects.create(image=File(image_file),
+                                         graffiti=graffiti)
+            
+            url = reverse('photo-detail', args=[photo.pk])
+            request = self.factory.get(url)
+            response = resolve(url).func(request, pk=photo.pk)
+            
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data['image'].startswith(TESTSERVER_IMAGES_URL + SAMPLE_IMAGE_SHA256_HASH))
+            self.assertTrue(response.data['image'].endswith(SAMPLE_IMAGE_EXT))
+            self.assertEqual(response.data['graffiti']['url'],
+                             reverse('graffiti-detail', request=request, args=[graffiti.pk]))
+            self.assertEqual(response.data['graffiti']['name'], graffiti.name)
+    
+    def test_destroy_photo(self):
+        with open(SAMPLE_IMAGE_PATH, "rb") as image_file:
+            user = User.objects.create(username='user')
+            graffiti = Graffiti.objects.create(name='user\'s graffiti',
+                                               owner=user)
+            photo = Photo.objects.create(image=File(image_file),
+                                         graffiti=graffiti)
+            
+            url = reverse('photo-detail', args=[photo.pk])
+            request = self.factory.delete(url)
+            test.force_authenticate(request, user)
+            response = resolve(url).func(request, pk=photo.pk)
+            
+            self.assertEqual(response.status_code, 204)
+            self.assertEqual(Photo.objects.count(), 0)
