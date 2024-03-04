@@ -71,64 +71,93 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(response.data['add_graffiti'],
                          reverse('user-add-graffiti', request=request, args=[user.username]))
     
-    def update_user(self, data, partial):
+    def test_update_user_method_not_allowed(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-detail', args=[user.username])
+        request = self.factory.put(url, data={})
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertEqual(response.status_code, 405)
+    
+    def test_partially_update_user_method_not_allowed(self):
+        user = User.objects.create(username='user')
+        
+        url = reverse('user-detail', args=[user.username])
+        request = self.factory.patch(url, data={})
+        response = resolve(url).func(request, username=user.username)
+        
+        self.assertEqual(response.status_code, 405)
+    
+    def change_user(self, data):
         user = User.objects.create(username='user', email='user@example.com')
         user_password = 'kW305U},jp2^'
         user.set_password(user_password)
         user.save()
         
-        url = reverse('user-detail', args=[user.username])
+        url = reverse('user-change', args=[user.username])
         data['old_password'] = user_password
-        request = (self.factory.patch if partial else self.factory.put)(url, data)
+        request = self.factory.post(url, data)
         test.force_authenticate(request, user)
         response = resolve(url).func(request, username=user.username)
         return request, response
     
-    def test_update_user(self):
+    def test_change_user(self):
         data = {
             'username': 'user_name',
             'email': 'user_name@example.com',
             'password': 'gK0RU14`S|Ix',
         }
-        request, response = self.update_user(data=data, partial=False)
+        request, response = self.change_user(data=data)
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Location'],
                          reverse('user-detail', request=request, args=[data['username']]))
         self.assertEqual(response.data['username'], data['username'])
     
-    def test_update_user_invalid_username(self):
+    def test_change_user_invalid_username(self):
         data = {
             'username': 'name_user\\',
             'email': 'name_user@u.com',
             'password': '4G0>6db&qI[t',
         }
-        __, response = self.update_user(data=data, partial=False)
+        __, response = self.change_user(data=data)
         
         self.assertContains(response, text='Invalid username', status_code=400)
     
-    def test_partially_update_user_invalid_username(self):
+    def test_partially_change_user(self):
+        data = {
+            'username': 'user_name',
+        }
+        request, response = self.change_user(data=data)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Location'],
+                         reverse('user-detail', request=request, args=[data['username']]))
+        self.assertEqual(response.data['username'], data['username'])
+    
+    def test_partially_change_user_invalid_username(self):
         data = {
             'username': 'user/name',
         }
-        __, response = self.update_user(data=data, partial=True)
+        __, response = self.change_user(data=data)
         
         self.assertContains(response, text='Invalid username', status_code=400)
     
-    def test_update_user_no_auth(self):
+    def test_change_user_no_auth(self):
         user = User.objects.create(username='user', email='user@example.com')
         user_password = 'kW305U},jp2^'
         user.set_password(user_password)
         user.save()
         
-        url = reverse('user-detail', args=[user.username])
+        url = reverse('user-change', args=[user.username])
         data = {
             'username': 'user_name',
             'email': 'user_name@example.com',
             'password': 'gK0RU14`S|Ix',
             'old_password': user_password,
         }
-        request = self.factory.put(url, data)
+        request = self.factory.post(url, data)
         response = resolve(url).func(request, username=user.username)
         
         self.assertContains(response, text='Authentication credentials were not provided', status_code=403)
@@ -137,21 +166,21 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(user.email, 'user@example.com')
         self.assertTrue(user.check_password(user_password))
     
-    def test_update_user_forbidden(self):
+    def test_change_user_forbidden(self):
         wrong_user = User.objects.create(username='wrong_user')
         user = User.objects.create(username='user', email='user@example.com')
         user_password = 'kW305U},jp2^'
         user.set_password(user_password)
         user.save()
         
-        url = reverse('user-detail', args=[user.username])
+        url = reverse('user-change', args=[user.username])
         data = {
             'username': 'user_name',
             'email': 'user_name@example.com',
             'password': 'gK0RU14`S|Ix',
             'old_password': user_password,
         }
-        request = self.factory.put(url, data)
+        request = self.factory.post(url, data)
         test.force_authenticate(request, wrong_user)
         response = resolve(url).func(request, username=user.username)
         
@@ -161,20 +190,20 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(user.email, 'user@example.com')
         self.assertTrue(user.check_password(user_password))
     
-    def test_update_user_incorrect_old_password(self):
+    def test_change_user_incorrect_old_password(self):
         user = User.objects.create(username='user', email='user@example.com')
         user_password = 'kW305U},jp2^'
         user.set_password(user_password)
         user.save()
         
-        url = reverse('user-detail', args=[user.username])
+        url = reverse('user-change', args=[user.username])
         data = {
             'username': 'user_name',
             'email': 'user_name@example.com',
             'password': 'gK0RU14`S|Ix',
             'old_password': 'invalid',
         }
-        request = self.factory.put(url, data)
+        request = self.factory.post(url, data)
         test.force_authenticate(request, user)
         response = resolve(url).func(request, username=user.username)
         
@@ -302,10 +331,8 @@ class GraffitiViewAPITestCase(test.APITestCase):
                          reverse('graffiti-add-photo', request=request, args=[graffiti.pk]))
     
     def test_create_graffiti_no_auth(self):
-        user = User.objects.create(username='user')
-        
         url = reverse('graffiti-list')
-        data = {'name': 'user\'s graffiti'}
+        data = {'name': 'nobody\'s graffiti'}
         request = self.factory.post(url, data)
         response = resolve(url).func(request)
         

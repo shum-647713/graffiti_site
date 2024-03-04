@@ -25,19 +25,18 @@ class UserViewSet(viewsets.ModelViewSet):
                 return serializers.HyperlinkedUserSerializer
             case 'create' | 'retrieve':
                 return serializers.UserSerializer
-            case 'update' | 'partial_update':
-                return serializers.UserUpdateSerializer
-            case 'activate':
+            case 'update' | 'partial_update' | 'activate':
                 return EmptySerializer
+            case 'change':
+                return serializers.UserUpdateSerializer
             case 'add_graffiti':
                 return serializers.GraffitiSerializer
     
     def get_permissions(self):
-        match self.action:
-            case 'list' | 'create' | 'retrieve' | 'activate' | None:
-                permission_classes = []
-            case 'update' | 'partial_update' | 'destroy' | 'add_graffiti':
-                permission_classes = [IsUserThemself]
+        if self.action in ['change', 'destroy', 'add_graffiti']:
+            permission_classes = [IsUserThemself]
+        else:
+            permission_classes = []
         return [permission() for permission in permission_classes]
     
     def create(self, request, *args, **kwargs):
@@ -56,6 +55,9 @@ class UserViewSet(viewsets.ModelViewSet):
         headers = {'Location': reverse('user-detail', request=request, args=[instance.username])}
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
     @action(detail=False, methods=['post'])
     def activate(self, request):
         token_value = request.query_params.get('token', None)
@@ -69,10 +71,14 @@ class UserViewSet(viewsets.ModelViewSet):
         headers = {'Location': reverse('user-detail', request=request, args=[user.username])}
         return Response(headers=headers)
     
-    def update(self, request, *args, **kwargs):
-        data = super().update(request, *args, **kwargs).data
-        headers = {'Location': reverse('user-detail', request=request, args=[data['username']])}
-        return Response(data, headers=headers)
+    @action(detail=True, methods=['post'])
+    def change(self, request, username=None):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        headers = {'Location': reverse('user-detail', request=request, args=[user.username])}
+        return Response(serializer.data, headers=headers)
     
     @action(detail=True, methods=['post'])
     def add_graffiti(self, request, username=None):
