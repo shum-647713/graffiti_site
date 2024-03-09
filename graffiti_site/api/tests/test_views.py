@@ -54,6 +54,8 @@ class UserViewAPITestCase(test.APITestCase):
         self.assertEqual(response['Location'],
                          reverse('user-detail', request=request, args=[data['username']]))
         self.assertEqual(response.data['username'], data['username'])
+        self.assertEqual(response.data['change'],
+                         reverse('user-change', request=request, args=[data['username']]))
         self.assertEqual(response.data['graffiti'], [])
         self.assertEqual(response.data['add_graffiti'],
                          reverse('user-add-graffiti', request=request, args=[data['username']]))
@@ -67,6 +69,8 @@ class UserViewAPITestCase(test.APITestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['username'], user.username)
+        self.assertEqual(response.data['change'],
+                         reverse('user-change', request=request, args=[user.username]))
         self.assertEqual(response.data['graffiti'], [])
         self.assertEqual(response.data['add_graffiti'],
                          reverse('user-add-graffiti', request=request, args=[user.username]))
@@ -252,6 +256,23 @@ class UserViewAPITestCase(test.APITestCase):
         del user.is_active
         self.assertEqual(user.is_active, True)
         self.assertEqual(ActivationToken.objects.filter(pk=token.pk).count(), 0)
+    
+    def test_activate_user_no_token(self):
+        url = reverse('user-activate')
+        request = self.factory.post(url)
+        response = resolve(url).func(request)
+        
+        self.assertContains(response, text='Query parameter \\"token\\" is missing', status_code=400)
+    
+    def test_activate_user_token_not_found(self):
+        wrong_token_value = token_urlsafe(32)
+        
+        url = reverse('user-activate')
+        request = self.factory.get(url, {'token': wrong_token_value})
+        request.method = 'post'
+        response = resolve(url).func(request)
+        
+        self.assertContains(response, text='Not found', status_code=404)
     
     def test_user_add_graffiti(self):
         user = User.objects.create(username='user')
